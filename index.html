@@ -29,6 +29,8 @@
     <input type="radio" name="theme" id="theme1" /><label for="theme1">Colored (bad angle)</label>
     <input type="radio" name="theme" id="theme2" /><label for="theme2">Black on white</label>
 
+    <p>Click/drag to paint. <button id="reset">Reset</button></p>
+
     <p>
       Examples:
       <a href="https://treinposities.nl/foto/67902" target="_blank">Den Helder</a>
@@ -36,7 +38,7 @@
       <a href="https://commons.wikimedia.org/wiki/File:Bestemming_Maastricht_Randwijck.jpg" target="_blank">Maastricht Randwijck</a>
     </p>
 
-    <svg width="1920" height="300">
+    <svg width="1920" height="600">
       <defs>
         <linearGradient id="gradient-background1" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stop-color="rgba(181,93,99,1)"></stop>
@@ -133,7 +135,7 @@
           }
         }
 
-        // PRE-PAINT
+        // STATES
         const STATES = {
           empty: '',
           // alphabet
@@ -155,18 +157,21 @@
         }
         // Export: [...document.querySelectorAll('#digits path')].map(path => path.getAttribute('opacity')).join('')
 
-        const STATE = STATES.Roosendaal
-
         const paths = document.querySelectorAll('#digits path')
         const hit = new Set()
-        for (const [index, path] of Object.entries([...paths])) {
-          if (STATE[index] === '1') {
-            toggle(path)
+        function paintState (state) {
+          for (const [index, path] of Object.entries([...paths])) {
+            const a = state[index] === '1'
+            const b = path.getAttribute('opacity') === '1'
+            if (a !== b) {
+              toggle(path)
+            }
           }
+          hit.clear()
         }
-        hit.clear()
+        paintState(STATES.Roosendaal)
 
-        // PAINT
+        // INTERACT
         let paint = false
         function toggle (target) {
           const opacity = target.getAttribute('opacity') === '1' ? '0' : '1'
@@ -183,6 +188,7 @@
         }
         document.addEventListener('mousedown', () => { paint = true })
         document.addEventListener('mouseup', () => { paint = false; hit.clear() })
+        document.getElementById('reset').addEventListener('click', () => { paintState(STATES.empty) })
       })()
     </script>
   </body>
