@@ -4,41 +4,55 @@
     <meta charset="utf-8">
     <title>Segment Display playground</title>
     <style>
-      svg { margin: 0 -8px; }
+      body {
+        font-family: monospace;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 95%;
+      }
+      html { height: 100%; }
 
-      #theme1:checked ~ svg #digits { fill: url(#gradient-digits1); }
-      #theme1:checked ~ svg #background { fill: url(#gradient-background1); }
-      #theme1:checked ~ svg #digits, #theme1:checked ~ svg #background { filter: url(#noise); }
-      #theme1:checked ~ svg { background: #333; }
+      body[data-theme=theme1] svg #digits { fill: url(#gradient-digits1); }
+      body[data-theme=theme1] svg #background { fill: url(#gradient-background1); }
+      body[data-theme=theme1] svg #digits, body[data-theme=theme1] svg #background { filter: url(#noise); }
+      body[data-theme=theme1] { background: #333; color: white; }
 
-      #theme2:checked ~ svg #digits { fill: black; }
-      #theme2:checked ~ svg #background{ fill: white; }
-      #theme2:checked ~ svg { background: #ccc; }
+      body[data-theme=theme2] svg #digits { fill: black; }
+      body[data-theme=theme2] svg #background{ fill: white; }
+      body[data-theme=theme2] { background: #ccc; }
 
-      #theme3:checked ~ svg #digits { fill: url(#gradient-digits2); filter: url(#glow); }
-      #theme3:checked ~ svg #background{ fill: url(#gradient-background2); }
-      #theme3:checked ~ svg { background: black; }
+      body[data-theme=theme3] svg #digits { fill: url(#gradient-digits2); filter: url(#glow); }
+      body[data-theme=theme3] svg #background{ fill: url(#gradient-background2); }
+      body[data-theme=theme3] { background: black; color: white; }
 
-      /* fill: #d6b33f; */
-      /* fill: #9d7a52; */
+      body[data-theme=theme1] a, body[data-theme=theme3] a { color: #5757ff; }
+      body[data-theme=theme1] a:visited, body[data-theme=theme3] a:visited { color: #8C4EC1; }
     </style>
   </head>
-  <body>
-    Theme:
-    <input type="radio" name="theme" id="theme3" checked /><label for="theme3">Colored</label>
-    <input type="radio" name="theme" id="theme1" /><label for="theme1">Colored (bad angle)</label>
-    <input type="radio" name="theme" id="theme2" /><label for="theme2">Black on white</label>
+  <body data-theme="theme3">
+    <div>
+      <p>
+        Info &amp; source: <a href="https://github.com/larsgw/segment-display">https://github.com/larsgw/segment-display</a>.
 
-    <p>Click/drag to paint. <button id="reset">Reset</button></p>
+        Theme:
+        <select id="theme">
+          <option value="theme3">Colored</label>
+          <option value="theme1">Colored (bad angle)</label>
+          <option value="theme2">Black on white</label>
+        </select>.
 
-    <p>
-      Examples:
-      <a href="https://treinposities.nl/foto/67902" target="_blank">Den Helder</a>
-      <a href="https://treinposities.nl/foto/40853" target="_blank">Den Haag Centraal</a>
-      <a href="https://commons.wikimedia.org/wiki/File:Bestemming_Maastricht_Randwijck.jpg" target="_blank">Maastricht Randwijck</a>
-    </p>
+        Click or drag while pressing the mouse button to paint.
 
-    <svg width="1920" height="600">
+        <button id="reset">Clear</button> the board.
+
+        To share, <a href="#" id="share">click here</a> then copy the URL above.
+
+        Made by <a href="https://larsgw.github.io/">Lars Willighagen</a>
+      </p>
+    </div>
+
+    <svg width="1904" height="671">
       <defs>
         <linearGradient id="gradient-background1" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stop-color="rgba(181,93,99,1)"></stop>
@@ -52,7 +66,10 @@
         </linearGradient>
         <linearGradient id="gradient-background2" gradientUnits="userSpaceOnUse" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stop-color="rgba(2,47,8,1)"></stop>
-          <stop offset="62%" stop-color="rgba(19,54,79,1)"></stop>
+          <stop offset="31%" stop-color="rgba(19,54,79,1)"></stop>
+          <stop offset="45%" stop-color="rgba(48,72,92,1)"></stop>
+          <stop offset="55%" stop-color="rgba(2,47,8,1)"></stop>
+          <stop offset="81%" stop-color="rgba(19,54,79,1)"></stop>
           <stop offset="100%" stop-color="rgba(48,72,92,1)"></stop>
         </linearGradient>
         <linearGradient id="gradient-digits2" gradientUnits="userSpaceOnUse">
@@ -100,68 +117,97 @@
         ]
 
         const COLUMN = [
-          [ 0, TYPE_A],
+          [10, TYPE_A],
           [10, TYPE_B],
-          [20, TYPE_A],
-          [30, TYPE_B],
-          [40, TYPE_A],
-          [50, TYPE_A],
-          [60, TYPE_B],
-          [70, TYPE_C],
-          [77, TYPE_D]
+          [10, TYPE_A],
+          [10, TYPE_B],
+          [10, TYPE_A],
+          [10, TYPE_A],
+          [10, TYPE_B],
+          [ 7, TYPE_C],
+          [ 7, TYPE_D]
         ]
 
-        const COLUMNS = 50
-        const COLUMN_GAP = 2//3
+        const COLUMN_GAP = 2
         const COLUMN_WIDTH = 10
+        const COLUMN_HEIGHT = COLUMN.reduce((sum, [height]) => sum + height, 0)
 
-        const CANVAS_WIDTH = COLUMNS * (COLUMN_WIDTH + COLUMN_GAP) - COLUMN_GAP
-        const CANVAS_HEIGHT = COLUMN.length * COLUMN_WIDTH
+        const COLUMN_GROUP_SIZE = 23
+        const COLUMN_GROUP_COLS = 2
+        const COLUMN_GROUP_ROWS = 2
+        const COLUMN_GROUP_WIDTH = COLUMN_WIDTH * COLUMN_GROUP_SIZE + COLUMN_GAP * (COLUMN_GROUP_SIZE - 1)
+        const COLUMN_GROUP_GAP = COLUMN_WIDTH + 2 * COLUMN_GAP
+        const COLUMN_GROUP_VGAP = 30
+
+        const CANVAS_WIDTH = COLUMN_GROUP_WIDTH * COLUMN_GROUP_COLS + COLUMN_GROUP_GAP * (COLUMN_GROUP_COLS - 1)
+        const CANVAS_HEIGHT = COLUMN_HEIGHT * COLUMN_GROUP_ROWS + COLUMN_GROUP_VGAP * (COLUMN_GROUP_ROWS - 1)
         document.querySelector('svg').setAttribute('viewBox', `0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`)
 
-        for (let column = 0; column < COLUMNS; column++) {
-//           const gap = (COLUMN_GAP * (1 - 2/3)) * Math.floor(column / 2) + (COLUMN_GAP * (1 + 2/3)) * Math.ceil(column / 2)
-//           const x = column * COLUMN_WIDTH + gap
-          
-          const x = column * (COLUMN_GAP + COLUMN_WIDTH)
-          for (const [y, paths] of COLUMN) {
-            for (const shape of paths) {
-              const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-              path.setAttribute('d', shape(x, y))
-              document.getElementById('background').appendChild(path.cloneNode())
-              path.setAttribute('opacity', '0')
-              document.getElementById('digits').appendChild(path)
+        for (let row = 0; row < COLUMN_GROUP_ROWS; row++) {
+          const verticalOffset = COLUMN_HEIGHT * row + COLUMN_GROUP_VGAP * row
+          for (let group = 0; group < COLUMN_GROUP_COLS; group++) {
+            const horizontalOffset = COLUMN_GROUP_WIDTH * group + COLUMN_GROUP_GAP * group
+            for (let column = 0; column < COLUMN_GROUP_SIZE; column++) {
+              const x = horizontalOffset + column * (COLUMN_GAP + COLUMN_WIDTH)
+              let y = verticalOffset
+              for (const [height, paths] of COLUMN) {
+                for (const shape of paths) {
+                  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+                  path.setAttribute('d', shape(x, y))
+                  document.getElementById('background').appendChild(path.cloneNode())
+                  path.setAttribute('opacity', '0')
+                  document.getElementById('digits').appendChild(path)
+                }
+                y += height
+              }
             }
           }
         }
 
-        // STATES
-        const STATES = {
-          empty: '',
-          // alphabet
-          // ..CD...H....M....R........
-          // a.cde.ghijkl.no..rst..w...
-          abc_kct: '111111111111111111111001000000000010111010000011000000011101100101011011000000100000000000100010000000011111111111011001000000111000000000111011000000111000000000111011000000101000000000101010000000111000000000000001111111111111111111011011000000111000000000101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
-          abc_gMihwij: '000000011111111111011011000000111000000000111011000000111000000000111011000000111111111111111110101111111111111111111010000100101011010000000000000010011101100000000000011111111111111111111001111000111111111111111011111111111111111111111010000000111000000000000000000000111000000000000000000000101111111111111001000000111111111111011010000000000000000000111000000000001111111111111000000000000000000000111000000000111111111111101001111000111111111111111000000000000000000000000011111000111111111111111110000000000000000000000000000000000000000000000000',
-          abc_dlDHrC: '000000011111111111011001000000111000000000111011000000111000000000111011111111111111111111111010111111111111111111111010111111111111111111111001111000000000000000111011111000000000000000111011101111111111111111101010111111111111111111111001000000000111000000000011000000000111000000000011111111111111111111111010000000111111111111111001000000011101100000000011000000111000000000000011000000101000000000000010011111111111111111011001111000000000000000111011111000000000000000111011101011000000000011101010000000000000000000000000000000000000000000000000',
-          abc_Rosena: '111111111111111111111001111000000111111010000011101111111101101111111010000000011111111111011001000000111000000000111011000000111000000000111011000000101111111111101010000000011111111000011001000000111000111000111011000000111000111000111011000000101000101111101010000000011111111111011001000000111000111000111011000000111000111000111011000000101111111000101010000000111111111111111001000000111000000000000011000000111000000000000011000000101111111111111010000000011000011111011001000000111000111000111011000000111000111000111011000000101111111111111010',
-          // digits
-          small_numerals: '000000111111111111111000000000011000011111111000000000101111111000111000000000011000011000011000000000101111111111101000000000101101101010000000000000011011011111111000000000111111111000111000000000101000101111101000000000011101111101011000000000101000101011101000000000011000000011001000000000101111111100000000000000011101101101011000000000101011011011101000000000011101101010011000000000101011011111101000000000011101101111011000000000101011011111101000',
-          numerals: '111111111111111111111000011000000010011111111000101111111101000000111000011000000010010000011000101111111101101111101000001101101011010000000000001011011111111111111000011111111011000000111000111000000100101111111000011111111101101111011000101000101011011111101000011000000010011111001000101111111101100000000000011101101101101111011000101011011011011111101000011101101011000101011000101011011111111111101000011111111101101111011000101111111011011111101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
-          text_figures: '000000111111111111111000000000011000011111011000000000101101100000101000000000011101000011000001000000101011011111111110000000101101101111011000000000011011011111111111000000011101101111000011000000111000000101111110011111111101101111011000101000101011011111101000000000111000000000000000000000111111111111111110011011011101101111011000101101101011011111101000000000011101101111011001000000101011011111111110000000011101101111011000000000101011011111101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
-          // names
-          Zwolle: '011000000010011111111000111010011101100000111000111101100000000000101000000000000000000000000000000000111111111111011000000000000000000000111000000000001111111111111000000000000000000000111000000000111111111111101000000000000000000000000000000000011111111111011000000000111000000000111000000000111000000000111000000000101111111111101000000000000000000000000000111111111111111111111000000000000000000000000000111111111111111111111000000000000000000000000000000000011111111111011000000000111000111000111000000000111000111000111000000000101111111000101000',
-//           Maastricht: '101111111111111111111000000100101011010000000000000010011101100000000000011111111111111111111000000000000000000000000000000000011000011111011000000000111000111000111000000000111000111000111000000000101111111111111000000000000000000000000000000000011000011111011000000000111000111000111000000000111000111000111000000000101111111111111000000000000000000000000000000000011111111000011000000000111000111000111000000000111000111000111000000000101000101111101000000000000000000000000000000000111000000000000000111111111111111111011000000000111000000000101000000000000000000000000000000000111111111111111000000000011101100000000000000000111000000000000000000000101000000000000000000000000000000000000000111000111111111111111000000000000000000000000000000000011111111111011000000000111000000000111000000000111000000000111000000000101000000000101000000000000000000000000000111111111111111111111000000000111000000000000000000000111000000000000000000000101111111111111000000000000000000000000000000000111000000000000000111111111111111111011000000000111000000000101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
-          Maastricht: '000000000000000000000000101111111111111111111000000100101011010000000000000010011101100000000000011111111111111111111000000000000000000000000000000000011000011111011000000000111000111000111000000000111000111000111000000000101111111111111000000000000000000000000000000000011000011111011000000000111000111000111000000000111000111000111000000000101111111111111000000000000000000000000000000000011111111000011000000000111000111000111000000000111000111000111000000000101000101111101000000000000000000000000000000000111000000000000000111111111111111111011000000000111000000000101000000000000000000000000000000000111111111111111000000000011101100000000000000000111000000000000000000000101000000000000000000000000000000000000000111000111111111111111000000000000000000000000000000000011111111111011000000000111000000000111000000000111000000000111000000000101000000000101000000000000000000000000000111111111111111111111000000000111000000000000000000000111000000000000000000000101111111111111000000000000000000000000000000000111000000000000000111111111111111111011000000000111000000000101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
-          Roosendaal: '000000000000000000000000111111111111111111111000111000000111111010000000101111111101000101111000000000000000000000000000000000011111111111011000000000111000000000111000000000111000000000111000000000101111111111101000000000000000000000000000000000011111111111011000000000111000000000111000000000111000000000111000000000101111111111101000000000000000000000000000000000011111111000011000000000111000111000111000000000111000111000111000000000101000101111101000000000000000000000000000000000011111111111011000000000111000111000111000000000111000111000111000000000101111111000101000000000000000000000000000000000111111111111111000000000111000000000000000000000111000000000000000000000101111111111111000000000000000000000000000000000011111111111011000000000111000000000111000000000111000000000111000111111111111111111111000000000000000000000000000000000011000011111011000000000111000111000111000000000111000111000111000000000101111111111111000000000000000000000000000000000011000011111011000000000111000111000111000000000111000111000111000000000101111111111111000000000000000000000000000111111111111111111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+        // STATE
+        function uint6ToBase64 (nUint6) {
+          return nUint6 < 26 ? nUint6 + 65
+            : nUint6 < 52 ? nUint6 + 71
+            : nUint6 < 62 ? nUint6 - 4
+            : nUint6 === 62 ? 43
+            : nUint6 === 63 ? 47
+            : 65
         }
-        // Export: [...document.querySelectorAll('#digits path')].map(path => path.getAttribute('opacity')).join('')
+        function getState () {
+          const bits = Array.from(paths).map(path => parseInt(path.getAttribute('opacity')))
+          let result = ''
+          for (let index = 0; index < bits.length; index += 6) {
+            const slice = bits.slice(index, index + 6)
+            const u6 = slice.reduce((number, bit, i) => number + (bit << i), 0)
+            result += String.fromCharCode(uint6ToBase64(u6))
+          }
+          return result
+        }
+        function base64ToUint6 (nChr) {
+          return nChr > 64 && nChr < 91 ? nChr - 65
+            : nChr > 96 && nChr < 123 ? nChr - 71
+            : nChr > 47 && nChr < 58 ? nChr + 4
+            : nChr === 43 ? 62
+            : nChr === 47 ? 63
+            : 0
+        }
+        function parseState (state) {
+          const bits = []
+          for (let index = 0; index < state.length; index++) {
+            const u6 = base64ToUint6(state[index].charCodeAt(0))
+            for (let i = 0; i < 6; i++) {
+              bits.push((u6 >> i) & 1)
+            }
+          }
+          return bits
+        }
 
+        // PAINT
         const paths = document.querySelectorAll('#digits path')
         const hit = new Set()
         function paintState (state) {
           for (const [index, path] of Object.entries([...paths])) {
-            const a = state[index] === '1'
+            const a = state[index] === 1
             const b = path.getAttribute('opacity') === '1'
             if (a !== b) {
               toggle(path)
@@ -169,7 +215,10 @@
           }
           hit.clear()
         }
-        paintState(STATES.Roosendaal)
+
+        let hash = '///HH4XA9voHAAAAA+/GAHAHAHAHA9/FAAAAA+/GAHAHAHAHA9/FAAAAA+HGAHHHAHHHAF9FAAAAA+/GAHHHAHHHA9HFA//HAHAAAHAAA9/HAAAAA+/GAHAHAHAH///HAAAAAG+GAHHHAHHHA9/HAAAAAG+GAHHHAHHHA9/HAAAA///HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+        if (window.location.hash) { hash = window.location.hash.slice(1) }
+        paintState(parseState(hash))
 
         // INTERACT
         let paint = false
@@ -188,7 +237,14 @@
         }
         document.addEventListener('mousedown', () => { paint = true })
         document.addEventListener('mouseup', () => { paint = false; hit.clear() })
-        document.getElementById('reset').addEventListener('click', () => { paintState(STATES.empty) })
+        document.getElementById('reset').addEventListener('click', () => { paintState([]) })
+        document.getElementById('theme').addEventListener('change', ({ target }) => { 
+          document.body.setAttribute('data-theme', target.value)
+        })
+        document.getElementById('share').addEventListener('click', (event) => {
+          event.preventDefault()
+          history.replaceState(undefined, undefined, '#' + getState())
+        })
       })()
     </script>
   </body>
